@@ -61,21 +61,12 @@ class BibleDbViewerApp:
         self.root = root
         self.root.title("성경 DB 통합 뷰어 (.bdb / .cdb / .cmp / .hdb / .sdb)")
         self.root.geometry("950x700")
-                base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+        base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
         icon_path = os.path.join(base_path, "icon.png")
         if os.path.exists(icon_path):
             self.root.iconphoto(False, tk.PhotoImage(file=icon_path))
-        self.conn = None
-        self.mode = "GENERAL"
-        self.active_table = ""
-        self.text_col = ""
-        self.book_numbers = []
-        self.chapter_numbers = []
-        self.hymn_chapters = []
-        self.table_names = []
-        self.font_size = 12
 
-        self._build_ui()
+        self.conn = None
 
     def _build_ui(self):
         top_frame = ttk.Frame(self.root, padding=8)
