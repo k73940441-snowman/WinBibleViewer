@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import sqlite3
+import traceback
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from html.parser import HTMLParser
@@ -64,9 +65,22 @@ class BibleDbViewerApp:
         base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
         icon_path = os.path.join(base_path, "icon.png")
         if os.path.exists(icon_path):
-            self.root.iconphoto(False, tk.PhotoImage(file=icon_path))
+            try:
+                self.root.iconphoto(False, tk.PhotoImage(file=icon_path))
+            except Exception:
+                pass
 
         self.conn = None
+        self.mode = "GENERAL"
+        self.active_table = ""
+        self.text_col = ""
+        self.book_numbers = []
+        self.chapter_numbers = []
+        self.hymn_chapters = []
+        self.table_names = []
+        self.font_size = 12
+
+        self._build_ui()
 
     def _build_ui(self):
         top_frame = ttk.Frame(self.root, padding=8)
@@ -135,12 +149,15 @@ class BibleDbViewerApp:
         self._setup_tags()
 
     def insert_rich_text(self, raw_text):
-        if not raw_text:
+        if raw_text is None:
             return
         cleaned = re.sub(r"<W[HG]\d+>", "", str(raw_text))
         if "<" in cleaned and ">" in cleaned:
-            parser = RichTextParser(self.text_area)
-            parser.feed(cleaned)
+            try:
+                parser = RichTextParser(self.text_area)
+                parser.feed(cleaned)
+            except Exception:
+                self.text_area.insert(tk.END, cleaned)
         else:
             self.text_area.insert(tk.END, cleaned)
 
@@ -189,7 +206,7 @@ class BibleDbViewerApp:
             detected_col = ""
             for tbl in tables:
                 cur.execute(f"PRAGMA table_info([{tbl}])")
-                cols = [col_info[1].lower() for col_info in cur.fetchall()]
+                cols = [col_row[1].lower() for col_row in cur.fetchall()]
                 if "book" in cols and "chapter" in cols:
                     verse_tbl = tbl
                     for candidate in ("btext", "ctext", "text", "content", "comment", "data", "body", "note"):
@@ -257,7 +274,7 @@ class BibleDbViewerApp:
 
         cur = self.conn.cursor()
         cur.execute(f"SELECT * FROM [{self.active_table}] WHERE book = ? AND chapter = ?", (book_num, chap_num))
-        cols = [d[0].lower() for d in cur.description]
+        cols = [desc[0].lower() for desc in cur.description]
         rows = cur.fetchall()
 
         verse_idx = next((i for i, c in enumerate(cols) if c in ("verse", "fromverse")), -1)
@@ -312,7 +329,7 @@ class BibleDbViewerApp:
     def load_general_data(self, table_name):
         cur = self.conn.cursor()
         cur.execute(f"SELECT * FROM [{table_name}] LIMIT 300")
-        cols = [d[0] for d in cur.description]
+        cols = [desc[0] for desc in cur.description]
         rows = cur.fetchall()
 
         self.text_area.delete("1.0", tk.END)
@@ -363,7 +380,7 @@ class BibleDbViewerApp:
                 f"SELECT * FROM [{self.active_table}] WHERE [{self.text_col}] LIKE ? ORDER BY book ASC, chapter ASC LIMIT 200",
                 (f"%{kw}%",)
             )
-            cols = [d[0].lower() for d in cur.description]
+            cols = [desc[0].lower() for desc in cur.description]
             b_idx = next((i for i, c in enumerate(cols) if c == "book"), -1)
             c_idx = next((i for i, c in enumerate(cols) if c == "chapter"), -1)
             v_idx = next((i for i, c in enumerate(cols) if c in ("verse", "fromverse")), -1)
@@ -393,10 +410,10 @@ class BibleDbViewerApp:
 
         else:
             cur.execute(f"PRAGMA table_info([{self.active_table}])")
-            all_cols = [info[1] for info in cur.fetchall()]
+            all_cols = [col_name for (_, col_name, _, _, _, _) in cur.fetchall()]
             where = " OR ".join([f"[{c}] LIKE ?" for c in all_cols])
             cur.execute(f"SELECT * FROM [{self.active_table}] WHERE {where} LIMIT 200", [f"%{kw}%"] * len(all_cols))
-            cols = [d[0] for d in cur.description]
+            cols = [desc[0] for desc in cur.description]
             for r in cur.fetchall():
                 count += 1
                 self.text_area.insert(tk.END, f"[{count}]\n", "ref_tag")
@@ -414,6 +431,11 @@ class BibleDbViewerApp:
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = BibleDbViewerApp(root)
-    root.mainloop()
+    try:
+        root = tk.Tk()
+        app = BibleDbViewerApp(root)
+        root.mainloop()
+    except Exception:
+        err_root = tk.Tk()
+        err_root.withdraw()
+        messagebox.showerror("실행 오류", traceback.format_exc())
