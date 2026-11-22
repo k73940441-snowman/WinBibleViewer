@@ -19,7 +19,7 @@ jobs:
       - name: Convert PNG to ICO
         run: python -c "from PIL import Image; Image.open('icon.png').save('icon.ico', format='ICO', sizes=[(256, 256)])"
       - name: Build Windows Executable
-        run: pyinstaller --noconsole --onefile --icon=icon.ico --name BibleDbViewer viewer.py
+        run: pyinstaller --noconsole --onefile --icon=icon.ico --add-data "icon.png;." --name BibleDbViewer viewer.py
       - name: Upload Windows EXE
         uses: actions/upload-artifact@v4
         with:
