@@ -14,10 +14,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install PyInstaller
-        run: pip install pyinstaller
+      - name: Install PyInstaller and Pillow
+        run: pip install pyinstaller pillow
+      - name: Convert PNG to ICO
+        run: python -c "from PIL import Image; Image.open('icon.png').save('icon.ico', format='ICO', sizes=[(256, 256)])"
       - name: Build Windows Executable
-        run: pyinstaller --noconsole --onefile --name BibleDbViewer viewer.py
+        run: pyinstaller --noconsole --onefile --icon=icon.ico --name BibleDbViewer viewer.py
       - name: Upload Windows EXE
         uses: actions/upload-artifact@v4
         with:
