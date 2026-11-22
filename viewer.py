@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import sqlite3
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -60,7 +61,10 @@ class BibleDbViewerApp:
         self.root = root
         self.root.title("성경 DB 통합 뷰어 (.bdb / .cdb / .cmp / .hdb / .sdb)")
         self.root.geometry("950x700")
-
+                base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+        icon_path = os.path.join(base_path, "icon.png")
+        if os.path.exists(icon_path):
+            self.root.iconphoto(False, tk.PhotoImage(file=icon_path))
         self.conn = None
         self.mode = "GENERAL"
         self.active_table = ""
